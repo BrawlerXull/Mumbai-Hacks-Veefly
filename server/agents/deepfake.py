@@ -7,9 +7,6 @@ from transformers import Wav2Vec2Model, ViTModel
 import numpy as np
 import librosa
 import cv2
-import logging
-
-logger = logging.getLogger(__name__)
 
 from pydub import AudioSegment
 
@@ -96,7 +93,7 @@ if __name__ == "__main__":
         video_frames = process_video(video_path)
         audio_features = process_audio(video_path)
     except ValueError as e:
-        logger.error(f"Error: {e}")
+        print(f"Error: {e}")
         exit()
     
     video_model = VideoFeatureExtractor()

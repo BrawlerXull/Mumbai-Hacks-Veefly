@@ -14,9 +14,6 @@ from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Add parent directory to path to allow imports from root
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,18 +39,18 @@ class HarvestAgent:
         self.reddit_agent = RedditAgent(api_key=REDDIT_API_KEY)
         
     def harvest(self, claim: str, keywords: List[str] = None) -> List[Dict[str, Any]]:
-        logger.info(f"🌾 Harvesting data for claim: '{claim}'")
+        print(f"🌾 Harvesting data for claim: '{claim}'")
         results = []
         
         # 1. Google Search (Web)
-        logger.info("  🔍 Searching Google...")
+        print("  🔍 Searching Google...")
         google_results = self._search_google(claim)
         results.extend(google_results)
         
         # 2. Twitter/X
         # 2. Twitter/X
         if self.x_agent:
-            logger.info("  🐦 Searching X (Twitter)...")
+            print("  🐦 Searching X (Twitter)...")
             try:
                 tweets = self.x_agent.search_tweets(claim, count=5)
                 for tweet in tweets:
@@ -77,18 +74,18 @@ class HarvestAgent:
                         "id": legacy.get("id_str") or str(hash(text))
                     })
             except Exception as e:
-                logger.error(f"Twitter search error: {e}")
+                print(f"Twitter search error: {e}")
             
         # 3. Reddit
-        logger.info("  👽 Searching Reddit...")
+        print("  👽 Searching Reddit...")
         try:
             # Assuming search_posts returns a list of post dictionaries
             # We might need to adjust based on actual API response
             reddit_data = self.reddit_agent.search_posts(claim)
-            logger.debug(f"[DEBUG] Reddit Data Type: {type(reddit_data)}")
+            print(f"[DEBUG] Reddit Data Type: {type(reddit_data)}")
             if isinstance(reddit_data, dict):
-                logger.debug(f"[DEBUG] Reddit Data Keys: {reddit_data.keys()}")
-                logger.debug(f"[DEBUG] Reddit Data Content (truncated): {str(reddit_data)[:500]}")
+                print(f"[DEBUG] Reddit Data Keys: {reddit_data.keys()}")
+                print(f"[DEBUG] Reddit Data Content (truncated): {str(reddit_data)[:500]}")
             
             # RapidAPI Reddit responses often have a 'data' key or list of posts
             posts = []
@@ -103,7 +100,7 @@ class HarvestAgent:
             elif isinstance(reddit_data, list):
                 posts = reddit_data
                 
-            logger.debug(f"[DEBUG] Reddit Posts Found: {len(posts)}")
+            print(f"[DEBUG] Reddit Posts Found: {len(posts)}")
             
             for post in posts:
                 # Handle if post is wrapped in 'data' (common in Reddit JSON)
@@ -126,7 +123,7 @@ class HarvestAgent:
                     "id": p_data.get("id") or str(hash(content))
                 })
         except Exception as e:
-            logger.error(f"Reddit search error: {e}")
+            print(f"Reddit search error: {e}")
         
         return results
 
@@ -142,7 +139,7 @@ class HarvestAgent:
         try:
             res = requests.get(url, params=params)
             if res.status_code != 200:
-                logger.error(f"Google search error: {res.status_code}")
+                print(f"Google search error: {res.status_code}")
                 return []
 
             data = res.json()
@@ -172,7 +169,7 @@ class HarvestAgent:
                 })
             return normalized
         except Exception as e:
-            logger.error(f"Google search error: {e}")
+            print("Google search error:", e)
             return []
 
 class CanonicalizerAgent:
@@ -182,7 +179,7 @@ class CanonicalizerAgent:
         self.vectorizer = TfidfVectorizer(stop_words='english')
         
     def canonicalize(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        logger.info("🔗 Canonicalizing claims...")
+        print("🔗 Canonicalizing claims...")
         if not items:
             return []
             
@@ -204,7 +201,7 @@ class CanonicalizerAgent:
                 item['cluster_id'] = 'cluster_0'
                 
         except Exception as e:
-            logger.error(f"Canonicalization error: {e}")
+            print(f"Canonicalization error: {e}")
             
         return items
 
@@ -212,7 +209,7 @@ class OriginDetector:
     """Finds earliest instances."""
     
     def detect_origin(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        logger.info("️ Detecting origin...")
+        print("�️ Detecting origin...")
         # Sort by timestamp (handling various formats is tricky, assuming string sort for MVP or 'date' field)
         # In a real app, parse dates properly.
         
@@ -223,7 +220,7 @@ class PropagationMapper:
     """Builds propagation graph."""
     
     def build_graph(self, items: List[Dict[str, Any]]) -> nx.DiGraph:
-        logger.info("🕸️ Building propagation graph...")
+        print("🕸️ Building propagation graph...")
         G = nx.DiGraph()
         
         # Add nodes
@@ -242,7 +239,7 @@ class PropagationMapper:
             tfidf_matrix = vectorizer.fit_transform(texts)
             cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
         except Exception as e:
-            logger.error(f"Error calculating similarity: {e}")
+            print(f"Error calculating similarity: {e}")
             cosine_sim = np.zeros((len(texts), len(texts)))
 
         # Infer edges (simplified)
@@ -273,7 +270,7 @@ class InfluenceAgent:
     """Computes influence metrics."""
     
     def compute_influence(self, graph: nx.DiGraph) -> Dict[str, float]:
-        logger.info("📊 Computing influence...")
+        print("📊 Computing influence...")
         try:
             pagerank = nx.pagerank(graph)
             return pagerank
@@ -284,7 +281,7 @@ class ExplainAgent:
     """Compiles narrative."""
     
     def explain(self, claim: str, origin: List[Dict[str, Any]], influencers: Dict[str, float]) -> str:
-        logger.info("📝 Generating explanation...")
+        print("📝 Generating explanation...")
         
         origin_text = "\n".join([f"- {o.get('author')} ({o.get('timestamp')})" for o in origin])
         top_influencers = sorted(influencers.items(), key=lambda x: x[1], reverse=True)[:3]
@@ -322,11 +319,11 @@ class MisinformationTracker:
         self.explain_agent = ExplainAgent()
         
     def track(self, claim: str):
-        logger.info(f"\n🚀 Starting tracking for: {claim}\n")
+        print(f"\n🚀 Starting tracking for: {claim}\n")
         
         # 1. Harvest
         items = self.harvest_agent.harvest(claim)
-        logger.info(f"  Found {len(items)} items.")
+        print(f"  Found {len(items)} items.")
         
         # 2. Canonicalize
         items = self.canonicalizer.canonicalize(items)
