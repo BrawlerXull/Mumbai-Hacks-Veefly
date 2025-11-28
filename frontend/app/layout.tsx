@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         <div className="flex h-screen bg-slate-50">
-          <SidebarNav />
+          {/* <SidebarNav /> */}
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
         <Analytics />
