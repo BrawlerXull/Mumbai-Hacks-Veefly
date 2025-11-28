@@ -1,0 +1,46 @@
+{
+  "article_metadata": {
+    "source": "Unknown",
+    "title": "Unknown",
+    "date": "Unknown",
+    "url": "https://www.foxnews.com/media/eric-swalwell-says-military-can-check-donald-trump-save-us"
+  },
+  "authenticity_score": 0.452,
+  "authenticity_category": "Uncertain",
+  "detailed_scores": {
+    "source_credibility": {
+      "score": 0.3,
+      "weight": 0.25
+    },
+    "evidence_support": {
+      "score": 0.2,
+      "weight": 0.3
+    },
+    "internal_consistency": {
+      "score": 0.9,
+      "weight": 0.2
+    },
+    "language_analysis": {
+      "score": 0.58,
+      "weight": 0.15
+    },
+    "factual_accuracy": {
+      "score": 0.5,
+      "weight": 0.1
+    }
+  },
+  "supporting_evidence": [],
+  "report": "\n            Authenticity Assessment\n            ----------------------\n            Score: 0.45\n            Category: Uncertain\n            \n            This article has been analyzed for authenticity based on multiple factors.\n            Please review the detailed scores and supporting evidence for more information.\n            ",
+  "key_claims": [
+    {
+      "claim": "<!doctype html>\n<html data-n-head-ssr lang=\"en\" data-n-head=\"%7B%22lang%22:%7B%22ssr%22:%22en%22%7D%...",
+      "keywords": [
+        "<!doctype",
+        "html>",
+        "<html",
+        "data-n-head-ssr",
+        "lang=\"en\""
+      ]
+    }
+  ]
+}
