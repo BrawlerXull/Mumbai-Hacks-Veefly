@@ -1,5 +1,4 @@
 "use client"
-
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { FileText, ImageIcon, Network } from "lucide-react"
@@ -30,12 +29,15 @@ export function SidebarNav() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 border-r border-slate-200 bg-white">
+    <aside className="w-64 border-r border-gray-800 bg-[#0a0a0a]">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="border-b border-slate-200 p-6">
-          <h2 className="text-lg font-bold text-slate-900">Misinformation Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-1">Detection & Analysis</p>
+        <div className="border-b border-gray-800 p-6">
+          <h2 className="text-lg font-bold">
+            <span className="text-blue-500">V</span>
+            <span className="text-white">eritas</span>
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Detection & Analysis</p>
         </div>
 
         {/* Navigation */}
@@ -43,19 +45,27 @@ export function SidebarNav() {
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-start gap-3 rounded-lg px-4 py-3 transition-colors",
-                  isActive ? "bg-blue-50 text-blue-600 border border-blue-200" : "text-slate-600 hover:bg-slate-50",
+                  "flex items-start gap-3 rounded-lg px-4 py-3 transition-all",
+                  isActive 
+                    ? "bg-blue-600/20 text-blue-400 border border-blue-600/30" 
+                    : "text-gray-400 hover:bg-[#151515] hover:text-gray-200 border border-transparent",
                 )}
               >
                 <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-xs text-slate-500 line-clamp-1">{item.description}</p>
+                  <p className={cn(
+                    "text-xs line-clamp-1",
+                    isActive ? "text-blue-300/70" : "text-gray-500"
+                  )}>
+                    {item.description}
+                  </p>
                 </div>
               </Link>
             )
@@ -63,7 +73,7 @@ export function SidebarNav() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-slate-200 p-4 text-xs text-slate-500">
+        <div className="border-t border-gray-800 p-4 text-xs text-gray-500">
           <p>Powered by AI Detection</p>
         </div>
       </div>
