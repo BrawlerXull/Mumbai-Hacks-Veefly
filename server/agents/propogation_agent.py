@@ -22,6 +22,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.x_agent import XAgent
 from agents.reddit_agent import RedditAgent
 from agents.instagram_agent import InstagramAgent
+from agents.youtube_agent import YouTubeAgent
+from agents.account_finder_agent import AccountFinderAgent
 
 load_dotenv()
 
@@ -30,16 +32,26 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY")
 REDDIT_API_KEY = os.getenv("REDDIT_RAPIDAPI_KEY")
 INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_RAPIDAPI_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 client = OpenAI(api_key=OPENAI_KEY)
 
 class HarvestAgent:
     """Collects posts matching claim signatures across platforms."""
     
-    def __init__(self):
+    def __init__(self, use_smart_accounts: bool = True):
+        """
+        Initialize Harvest Agent with platform-specific agents.
+        
+        Args:
+            use_smart_accounts: If True, uses LLM to find relevant accounts for Instagram/Twitter.
+                              If False, uses predefined list of news outlets.
+        """
         self.x_agent = XAgent(api_key=TWITTER_API_KEY) if TWITTER_API_KEY else None
         self.reddit_agent = RedditAgent(api_key=REDDIT_API_KEY)
         self.instagram_agent = InstagramAgent(api_key=INSTAGRAM_API_KEY) if INSTAGRAM_API_KEY else None
+        self.youtube_agent = YouTubeAgent(api_key=YOUTUBE_API_KEY) if YOUTUBE_API_KEY else None
+        self.account_finder = AccountFinderAgent(api_key=OPENAI_KEY) if (use_smart_accounts and OPENAI_KEY) else None
         
     def harvest(self, claim: str, keywords: List[str] = None) -> List[Dict[str, Any]]:
         """
@@ -144,49 +156,90 @@ class HarvestAgent:
         if self.instagram_agent:
             print("  📸 Searching Instagram...")
             try:
-                # Define relevant Instagram accounts to search
-                # These are common news outlets, fact-checkers, and influencers
-                relevant_accounts = [
-                    "bbcnews", "cnn", "nytimes", "reuters",
-                    "washingtonpost", "aljazeera",
-                    "timesofindia", "ndtv",
-                    "the_hindu", "hindustantimes", "abpnewstv"
-                ]
+                # Use LLM to find relevant accounts or fallback to predefined list
+                if self.account_finder:
+                    print("     Using LLM to find relevant Instagram accounts...")
+                    relevant_accounts = self.account_finder.find_instagram_accounts(claim, max_accounts=5)
+                else:
+                    # Fallback: Define relevant Instagram accounts to search
+                    # These are common news outlets, fact-checkers, and influencers
+                    relevant_accounts = [
+                        "bbcnews", "cnn", "nytimes", "reuters",
+                        "washingtonpost", "aljazeera",
+                        "timesofindia", "ndtv",
+                        "the_hindu", "hindustantimes", "abpnewstv"
+                    ]
                 
-                # Extract keywords from claim for matching
-                claim_keywords = claim.lower().split()
-                
-                # Search posts from each relevant account
-                for username in relevant_accounts[:5]:  # Limit to first 5 to avoid rate limits
+                # Collect all posts first
+                all_posts = []
+                for username in relevant_accounts[:10]:  # Limit to 10 accounts
                     try:
                         posts = self.instagram_agent.get_user_posts(username, count=10)
-                        
-                        # Filter posts that mention the claim keywords
                         for post in posts:
-                            caption = post.get("caption", "").lower()
-                            
-                            # Check if any claim keyword appears in the caption
-                            if any(keyword in caption for keyword in claim_keywords if len(keyword) > 3):
-                                timestamp = post.get("timestamp", "Unknown")
-                                
-                                results.append({
-                                    "platform": "instagram",
-                                    "content": post.get("caption", ""),
-                                    "url": post.get("url", ""),
-                                    "timestamp": timestamp,
-                                    "author": f"@{username}",
-                                    "id": post.get("id") or str(hash(post.get("caption", ""))),
-                                    "likes": post.get("likes", 0),
-                                    "comments": post.get("comments", 0),
-                                    "is_video": post.get("is_video", False)
-                                })
+                            post['username'] = username
+                            all_posts.append(post)
                     except Exception as account_error:
                         print(f"Error fetching from @{username}: {account_error}")
                         continue
+                
+                # Use LLM to find posts matching the claim
+                if all_posts:
+                    print(f"     Analyzing {len(all_posts)} Instagram posts for relevance...")
+                    matching_posts = self.instagram_agent.find_matching_posts(claim, all_posts)
+                    
+                    print(f"     ✓ Found {len(matching_posts)} matching posts")
+                    
+                    for post in matching_posts:
+                        timestamp = post.get("timestamp", "Unknown")
+                        username = post.get("username", "unknown")
+                        caption = post.get("caption", "")
+                        
+                        # Log matching post details
+                        print(f"       • @{username}: {caption}..." if len(caption) > 80 else f"       • @{username}: {caption}")
+                        
+                        results.append({
+                            "platform": "instagram",
+                            "content": caption,
+                            "url": post.get("url", ""),
+                            "timestamp": timestamp,
+                            "author": f"@{username}",
+                            "id": post.get("id") or str(hash(caption)),
+                            "likes": post.get("likes", 0),
+                            "comments": post.get("comments", 0),
+                            "is_video": post.get("is_video", False),
+                            "similarity_score": post.get("similarity_score", 0),
+                            "media_url": post.get("media_url", "")
+                        })
                         
             except Exception as e:
                 print(f"Instagram search error: {e}")
         
+        
+        # 5. YouTube
+        # if self.youtube_agent:
+        #     print("  🎥 Searching YouTube...")
+        #     try:
+        #         videos = self.youtube_agent.search_and_transcribe(claim, max_results=20)
+                
+        #         for video in videos:
+        #             # Only include videos with transcripts
+        #             if video.get('has_transcript'):
+        #                 results.append({
+        #                     "platform": "youtube",
+        #                     "content": video.get("transcript", ""),
+        #                     "url": video.get("url", ""),
+        #                     "timestamp": video.get("published_at", "Unknown"),
+        #                     "author": video.get("channel_title", "Unknown"),
+        #                     "id": video.get("video_id", ""),
+        #                     "title": video.get("title", ""),
+        #                     "view_count": video.get("view_count", 0),
+        #                     "like_count": video.get("like_count", 0),
+        #                     "comment_count": video.get("comment_count", 0),
+        #                     "transcript_word_count": video.get("transcript_word_count", 0)
+        #                 })
+        #     except Exception as e:
+        #         print(f"YouTube search error: {e}")
+
         return results
 
     def _search_google(self, query: str, n=10) -> List[Dict[str, Any]]:
