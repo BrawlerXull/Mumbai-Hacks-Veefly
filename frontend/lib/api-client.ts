@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:6000"
+const API_BASE_URL = "https://nonpredicative-neta-pratincolous.ngrok-free.dev/"
 
 export interface TrackPropagationResponse {
   claim: string
