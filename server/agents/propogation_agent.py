@@ -24,6 +24,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import Agents
 from agents.x_agent import XAgent
 from agents.reddit_agent import RedditAgent
+from agents.instagram_agent import InstagramAgent
 
 load_dotenv()
 
@@ -31,6 +32,7 @@ SERP_API_KEY = os.getenv("SERPER_API_KEY")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 TWITTER_API_KEY = os.getenv("TWITTER_API_KEY")
 REDDIT_API_KEY = os.getenv("REDDIT_RAPIDAPI_KEY")
+INSTAGRAM_API_KEY = os.getenv("INSTAGRAM_RAPIDAPI_KEY")
 
 client = OpenAI(api_key=OPENAI_KEY)
 
@@ -40,8 +42,21 @@ class HarvestAgent:
     def __init__(self):
         self.x_agent = XAgent(api_key=TWITTER_API_KEY) if TWITTER_API_KEY else None
         self.reddit_agent = RedditAgent(api_key=REDDIT_API_KEY)
+        self.instagram_agent = InstagramAgent(api_key=INSTAGRAM_API_KEY) if INSTAGRAM_API_KEY else None
         
     def harvest(self, claim: str, keywords: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Harvest data from multiple platforms for a given claim.
+        
+        Platforms searched:
+        1. Google (Web) - General search results
+        2. Twitter/X - Direct tweet search
+        3. Reddit - Post search across subreddits
+        4. Instagram - Search posts from known news/influencer accounts, filtered by keywords
+        
+        Note: Instagram doesn't support direct hashtag/keyword search via API,
+        so we search posts from curated list of news outlets and filter by claim keywords.
+        """
         logger.info(f"🌾 Harvesting data for claim: '{claim}'")
         results = []
         
@@ -127,6 +142,53 @@ class HarvestAgent:
                 })
         except Exception as e:
             logger.error(f"Reddit search error: {e}")
+        
+        # 4. Instagram
+        if self.instagram_agent:
+            logger.info("  📸 Searching Instagram...")
+            try:
+                # Define relevant Instagram accounts to search
+                # These are common news outlets, fact-checkers, and influencers
+                relevant_accounts = [
+                    "bbcnews", "cnn", "nytimes", "reuters",
+                    "washingtonpost", "aljazeera",
+                    "timesofindia", "ndtv",
+                    "the_hindu", "hindustantimes", "abpnewstv"
+                ]
+                
+                # Extract keywords from claim for matching
+                claim_keywords = claim.lower().split()
+                
+                # Search posts from each relevant account
+                for username in relevant_accounts[:5]:  # Limit to first 5 to avoid rate limits
+                    try:
+                        posts = self.instagram_agent.get_user_posts(username, count=10)
+                        
+                        # Filter posts that mention the claim keywords
+                        for post in posts:
+                            caption = post.get("caption", "").lower()
+                            
+                            # Check if any claim keyword appears in the caption
+                            if any(keyword in caption for keyword in claim_keywords if len(keyword) > 3):
+                                timestamp = post.get("timestamp", "Unknown")
+                                
+                                results.append({
+                                    "platform": "instagram",
+                                    "content": post.get("caption", ""),
+                                    "url": post.get("url", ""),
+                                    "timestamp": timestamp,
+                                    "author": f"@{username}",
+                                    "id": post.get("id") or str(hash(post.get("caption", ""))),
+                                    "likes": post.get("likes", 0),
+                                    "comments": post.get("comments", 0),
+                                    "is_video": post.get("is_video", False)
+                                })
+                    except Exception as account_error:
+                        logger.error(f"Error fetching from @{username}: {account_error}")
+                        continue
+                        
+            except Exception as e:
+                logger.error(f"Instagram search error: {e}")
         
         return results
 
