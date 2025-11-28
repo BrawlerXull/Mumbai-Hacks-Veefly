@@ -1,5 +1,12 @@
-import { redirect } from "next/navigation"
+import VeritasFactCheck from '@/components/home'
+import React from 'react'
 
-export default function Home() {
-  redirect("/supply-chain")
+function page() {
+  return (
+    <div>
+      <VeritasFactCheck/>
+    </div>
+  )
 }
+
+export default page
