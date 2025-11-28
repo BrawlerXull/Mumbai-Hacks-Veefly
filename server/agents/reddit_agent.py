@@ -15,7 +15,7 @@ class RedditAgent:
     """Agent for interacting with Reddit data via RapidAPI."""
     
     def __init__(self, api_key: Optional[str] = None, host: str = "reddit34.p.rapidapi.com"):
-        self.api_key = api_key or os.getenv("REDDIT_RAPIDAPI_KEY") or "03145fe773mshcee21ab8622b37ap1395fcjsn915642136ff9" # Fallback to user provided key for now
+        self.api_key = api_key or os.getenv("REDDIT_RAPIDAPI_KEY") or "8e1069bac9mshac5c31c1903bec8p1e5129jsn78ce9df21df2" # Fallback to user provided key for now
         self.host = host
         self.headers = {
             'x-rapidapi-key': self.api_key,
