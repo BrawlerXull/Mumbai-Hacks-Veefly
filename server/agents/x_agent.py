@@ -7,6 +7,9 @@ import requests
 from typing import List, Dict, Any, Optional
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class XAgent:
@@ -31,8 +34,8 @@ class XAgent:
             )
 
             if response.status_code != 200:
-                print(f"[ERROR] Failed to fetch user ID. Status: {response.status_code}")
-                print(response.text)
+                logger.error(f"[ERROR] Failed to fetch user ID. Status: {response.status_code}")
+                logger.error(response.text)
                 return None
 
             user_json = response.json()
@@ -45,12 +48,12 @@ class XAgent:
             )
 
             if not user_id:
-                print(f"[DEBUG] Could not find user ID in response: {json.dumps(user_json, indent=2)[:500]}")
+                logger.debug(f"[DEBUG] Could not find user ID in response: {json.dumps(user_json, indent=2)[:500]}")
             
             return user_id
 
         except requests.RequestException as e:
-            print(f"[ERROR] Request failed: {e}")
+            logger.error(f"[ERROR] Request failed: {e}")
             return None
 
     def get_recent_tweets(self, user_id: str, count: int = 3) -> List[Dict[str, Any]]:
@@ -62,11 +65,11 @@ class XAgent:
                 headers=self.headers
             )
 
-            print(f"[DEBUG] Tweets API Status: {response.status_code}")
-            print(f"[DEBUG] Tweets API Response: {response.text[:1000]}")
+            logger.debug(f"[DEBUG] Tweets API Status: {response.status_code}")
+            logger.debug(f"[DEBUG] Tweets API Response: {response.text[:1000]}")
 
             if response.status_code != 200:
-                print(f"[ERROR] Failed to fetch tweets. Status: {response.status_code}")
+                logger.error(f"[ERROR] Failed to fetch tweets. Status: {response.status_code}")
                 return []
 
             tweets_json = response.json()
@@ -76,7 +79,7 @@ class XAgent:
             return tweets[:count]
 
         except requests.RequestException as e:
-            print(f"[ERROR] Request failed: {e}")
+            logger.error(f"[ERROR] Request failed: {e}")
             return []
 
     def search_tweets(self, query: str, count: int = 10) -> List[Dict[str, Any]]:
@@ -92,17 +95,17 @@ class XAgent:
                 headers=self.headers
             )
 
-            print(f"[DEBUG] Search API Status: {response.status_code}")
+            logger.debug(f"[DEBUG] Search API Status: {response.status_code}")
             
             if response.status_code != 200:
-                print(f"[ERROR] Failed to search tweets. Status: {response.status_code}")
+                logger.error(f"[ERROR] Failed to search tweets. Status: {response.status_code}")
                 return []
 
             data = response.json()
             return self._extract_tweets(data)
 
         except requests.RequestException as e:
-            print(f"[ERROR] Search request failed: {e}")
+            logger.error(f"[ERROR] Search request failed: {e}")
             return []
 
     def _extract_tweets(self, data: Any) -> List[Dict[str, Any]]:
@@ -155,7 +158,7 @@ class XAgent:
                                 items.append(tweet_result)
 
         except Exception as e:
-            print(f"[ERROR] Failed to extract items: {e}")
+            logger.error(f"[ERROR] Failed to extract items: {e}")
 
         return items
 
@@ -196,7 +199,7 @@ class XAgent:
 
     def get_user_tweet_report(self, username: str, count: int = 3) -> Dict[str, Any]:
         """Full pipeline: ID → Tweets → Analysis."""
-        print(f"[INFO] Fetching data for @{username}...")
+        logger.info(f"[INFO] Fetching data for @{username}...")
 
         user_id = self.get_user_id(username)
         if not user_id:
@@ -205,7 +208,7 @@ class XAgent:
         print(f"[INFO] Found user ID: {user_id}")
 
         tweets = self.get_recent_tweets(user_id, count)
-        print(f"[INFO] Fetched {len(tweets)} tweets")
+        logger.info(f"[INFO] Fetched {len(tweets)} tweets")
 
         analysis = self.analyze_tweets(tweets)
 

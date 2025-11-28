@@ -13,6 +13,9 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.docstore.document import Document
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 from utils.helpers import load_api_key, fetch_article_content, calculate_similarity
 
@@ -43,7 +46,7 @@ class SearchAgent:
         Returns:
             List of relevant articles with metadata
         """
-        print(f"Searching for historical news related to: {query}")
+        logger.info(f"Searching for historical news related to: {query}")
         
         # Determine date restriction based on time_range_days
         date_restrict = self._get_date_restriction(time_range_days)
@@ -74,9 +77,9 @@ class SearchAgent:
             return enriched_results
             
         except Exception as e:
-            print(f"Error searching with Serper API: {e}")
+            logger.error(f"Error searching with Serper API: {e}")
             # Fall back to mock data if the API fails
-            print("Falling back to mock search data...")
+            logger.warning("Falling back to mock search data...")
             return self._mock_search_fallback(query, time_range_days)
             
     def _search_google(self, query: str, n=10) -> List[Dict[str, Any]]:
@@ -93,7 +96,7 @@ class SearchAgent:
         try:
             res = requests.request("POST", url, headers=headers, data=payload)
             if res.status_code != 200:
-                print(f"Google search error: {res.status_code}")
+                logger.error(f"Google search error: {res.status_code}")
                 return []
 
             data = res.json()
@@ -124,7 +127,7 @@ class SearchAgent:
                 })
             return normalized
         except Exception as e:
-            print("Google search error:", e)
+            logger.error(f"Google search error: {e}")
             return []
     
 
@@ -159,7 +162,7 @@ class SearchAgent:
             return ""
             
         except Exception as e:
-            print(f"Error extracting webpage content: {e}")
+            logger.error(f"Error extracting webpage content: {e}")
             return ""
     
     def _get_date_restriction(self, time_range_days: int) -> str:

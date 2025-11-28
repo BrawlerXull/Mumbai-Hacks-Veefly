@@ -8,6 +8,9 @@ import os
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import urllib.parse
+import logging
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -38,13 +41,13 @@ class RedditAgent:
             data = res.read()
             
             if res.status != 200:
-                print(f"[ERROR] Reddit API error {res.status}: {data.decode('utf-8')}")
+                logger.error(f"[ERROR] Reddit API error {res.status}: {data.decode('utf-8')}")
                 return None
                 
             return json.loads(data.decode("utf-8"))
             
         except Exception as e:
-            print(f"[ERROR] Reddit request failed: {e}")
+            logger.error(f"[ERROR] Reddit request failed: {e}")
             return None
 
     def get_subreddit_info(self, subreddit: str) -> Dict[str, Any]:

@@ -9,6 +9,9 @@ from tensorflow.keras.layers import LeakyReLU  # type: ignore
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint  # type: ignore
 import numpy as np
 from transformers import pipeline
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DatasetHandler:
     """
@@ -47,7 +50,7 @@ class DatasetHandler:
             os.makedirs(self.dataset_download_dir)
         file_path = os.path.join(self.dataset_download_dir, self.dataset_file)
         if os.path.exists(file_path):
-            print(f'dataset file {self.dataset_file} already exists at {file_path}')
+            logger.info(f'dataset file {self.dataset_file} already exists at {file_path}')
             return True
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         response = requests.get(self.dataset_url, stream=True, verify=False)
@@ -56,7 +59,7 @@ class DatasetHandler:
             for data in response.iter_content(chunk_size=1024):
                 size = file.write(data)
                 bar.update(size)
-        print(f'dataset downloaded and saved to {file_path}')
+        logger.info(f'dataset downloaded and saved to {file_path}')
         return True
 
     def unzip_dataset(self):
@@ -68,14 +71,14 @@ class DatasetHandler:
         """
         file_path = os.path.join(self.dataset_download_dir, self.dataset_file)
         if os.path.exists(self.dataset_dir):
-            print(f'dataset is already downloaded and extracted at {self.dataset_dir}')
+            logger.info(f'dataset is already downloaded and extracted at {self.dataset_dir}')
             return True
         if not os.path.exists(file_path):
-            print(f'dataset file {file_path} not found after download')
+            logger.error(f'dataset file {file_path} not found after download')
             return False
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(self.dataset_download_dir)
-        print(f'dataset extracted to {self.dataset_dir}')
+        logger.info(f'dataset extracted to {self.dataset_dir}')
         return True
 
     def get_image_dataset_from_directory(self, dir_name):
@@ -243,10 +246,10 @@ class TrainModel:
             tuple: History object and evaluation metrics.
         """
         if not self.dataset_handler.download_dataset():
-            print('failed to download dataset')
+            logger.error('failed to download dataset')
             return
         if not self.dataset_handler.unzip_dataset():
-            print('failed to unzip dataset')
+            logger.error('failed to unzip dataset')
             return
         train_data, test_data, val_data = self.dataset_handler.load_split_data()
         model = DeepfakeDetectorModel()
@@ -269,11 +272,11 @@ class DeepfakeImagePredictor:
     def load_model(self):
         if self.pipeline is None:
             try:
-                print(f"Loading model: {self.model_name}...")
+                logger.info(f"Loading model: {self.model_name}...")
                 self.pipeline = pipeline("image-classification", model=self.model_name)
-                print("Model loaded successfully.")
+                logger.info("Model loaded successfully.")
             except Exception as e:
-                print(f"Error loading model: {e}")
+                logger.error(f"Error loading model: {e}")
                 
     def predict(self, image_path):
         """
@@ -288,7 +291,7 @@ class DeepfakeImagePredictor:
         self.load_model()
         
         if self.pipeline is None:
-            print("Model pipeline not initialized.")
+            logger.warning("Model pipeline not initialized.")
             return 0.5
             
         try:
@@ -296,7 +299,7 @@ class DeepfakeImagePredictor:
             # predictions is a list of dicts: [{'label': 'Real', 'score': 0.9}, {'label': 'Fake', 'score': 0.1}]
             # We need to find the score for 'Real' (or whatever the label is for real images)
             
-            print(f"Raw predictions: {predictions}")
+            logger.debug(f"Raw predictions: {predictions}")
             
             real_score = 0.0
             fake_score = 0.0
@@ -315,7 +318,7 @@ class DeepfakeImagePredictor:
             return real_score
             
         except Exception as e:
-            print(f"Error predicting image: {e}")
+            logger.error(f"Error predicting image: {e}")
             return 0.5 # Default to uncertain
 
 

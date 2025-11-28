@@ -4,6 +4,9 @@ Responsible for coordinating the deepfake detection process using video and audi
 """
 from typing import Dict, Any, List, Optional
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 import torch
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -79,7 +82,7 @@ class MultiModelOrchestrator:
         Returns:
             Dictionary with authenticity assessment and report
         """
-        print(f"Starting deepfake detection process for {video_path}...")
+        logger.info(f"Starting deepfake detection process for {video_path}...")
         
         if video_metadata is None:
             video_metadata = {
@@ -117,7 +120,7 @@ class MultiModelOrchestrator:
             return result
 
         except Exception as e:
-            print(f"Error processing video: {e}")
+            logger.error(f"Error processing video: {e}")
             return {
                 "video_metadata": video_metadata,
                 "error": str(e),
@@ -135,7 +138,7 @@ class MultiModelOrchestrator:
         Returns:
             Dictionary with authenticity assessment and report
         """
-        print(f"Starting deepfake image detection process for {image_path}...")
+        logger.info(f"Starting deepfake image detection process for {image_path}...")
         
         if image_metadata is None:
             image_metadata = {
@@ -172,7 +175,7 @@ class MultiModelOrchestrator:
             return result
 
         except Exception as e:
-            print(f"Error processing image: {e}")
+            logger.error(f"Error processing image: {e}")
             return {
                 "image_metadata": image_metadata,
                 "error": str(e),
@@ -183,7 +186,7 @@ class MultiModelOrchestrator:
         """
         Generate a report using LLM.
         """
-        print("Generating final deepfake report...")
+        logger.info("Generating final deepfake report...")
         try:
             # Ensure metadata is serialized to string as prompt expects string
             metadata_str = json.dumps(metadata, indent=2)
@@ -195,5 +198,5 @@ class MultiModelOrchestrator:
             )
             return report
         except Exception as e:
-            print(f"Error generating report: {e}")
+            logger.error(f"Error generating report: {e}")
             return f"Analysis complete. Result: {category} (Score: {score:.4f}). Report generation failed."

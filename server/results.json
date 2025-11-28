@@ -3,9 +3,9 @@
     "source": "Unknown",
     "title": "Unknown",
     "date": "Unknown",
-    "url": "https://www.foxnews.com/media/eric-swalwell-says-military-can-check-donald-trump-save-us"
+    "url": null
   },
-  "authenticity_score": 0.452,
+  "authenticity_score": 0.44290854314767364,
   "authenticity_category": "Uncertain",
   "detailed_scores": {
     "source_credibility": {
@@ -13,7 +13,7 @@
       "weight": 0.25
     },
     "evidence_support": {
-      "score": 0.2,
+      "score": 0.09461577874621353,
       "weight": 0.3
     },
     "internal_consistency": {
@@ -21,25 +21,50 @@
       "weight": 0.2
     },
     "language_analysis": {
-      "score": 0.58,
+      "score": 1.0,
       "weight": 0.15
     },
     "factual_accuracy": {
-      "score": 0.5,
+      "score": 0.09523809523809523,
       "weight": 0.1
     }
   },
-  "supporting_evidence": [],
-  "report": "\n            Authenticity Assessment\n            ----------------------\n            Score: 0.45\n            Category: Uncertain\n            \n            This article has been analyzed for authenticity based on multiple factors.\n            Please review the detailed scores and supporting evidence for more information.\n            ",
+  "supporting_evidence": [
+    {
+      "title": "Standardized Tests | Pros, Cons, Teachers, Students ...",
+      "source": "Unknown",
+      "date": "Unknown",
+      "url": "https://www.britannica.com/procon/standardized-tests-debate",
+      "snippet": "Evaluate FairTest's \u201ctesting is not teaching\u201d campaign for opting out of standardized tests. Consider how you felt about the issue before reading this article.",
+      "relevance_score": 0.1111111111111111
+    },
+    {
+      "title": "How the New York Times A/B tests their headlines - TJCX",
+      "source": "Unknown",
+      "date": "Mar 10, 2021",
+      "url": "https://blog.tjcx.me/p/new-york-times-ab-testing",
+      "snippet": "This first post is all about A/B testing: how the NYT tests different headlines and how they change over time.",
+      "relevance_score": 0.08695652173913043
+    },
+    {
+      "title": "Oklahoma Proposes 'America First Test' for Teachers From ...",
+      "source": "Unknown",
+      "date": "Aug 20, 2025",
+      "url": "https://www.nytimes.com/2025/08/20/education/oklahoma-woke-teacher-test.html",
+      "snippet": "Its America First Test is designed to filter out teachers with views contrary to Oklahoma values, said Ryan Walters, the state superintendent.",
+      "relevance_score": 0.08
+    }
+  ],
+  "report": "## Fake News Detection Report\n\n**Article Title:** (Implicit: \"This is a test article.\")\n\n---\n\n### 1. Executive Summary\n\nThis article, consisting solely of the phrase \"This is a test article.\", has been assessed as **Uncertain** regarding its authenticity, with a final score of **0.44**. This classification indicates that there is insufficient verifiable information to determine its truthfulness or falsehood. The primary reason for this uncertainty is the complete lack of substantive content or verifiable claims within the article itself.\n\n---\n\n### 2. Key Findings\n\n*   **Extremely Low Evidence Support (Score: 0.09) & Factual Accuracy (Score: 0.09):** The article provides no factual claims or information that can be supported by external evidence. Its content is purely a placeholder, rendering any assessment of factual accuracy or evidence support impossible in a meaningful way.\n*   **High Internal Consistency (Score: 0.9) & Language Analysis (Score: 1.0):** The article's single sentence (\"This is a test article.\") is inherently internally consistent and grammatically perfect, leading to high scores in these categories. However, this does not reflect the quality of information, only the structure of the minimal text.\n*   **Low Source Credibility (Score: 0.3):** Given the nature of the article as a placeholder, its \"source\" (if any implied) is not established, contributing to a low credibility score.\n\n---\n\n### 3. Specific Red Flags or Supporting Evidence\n\n*   **Article Content is a Placeholder:** The most significant red flag is the article's content itself: \"This is a test article.\" This is not a news report, an opinion piece, or any form of substantive communication. It explicitly states its nature as a test.\n*   **Irrelevant Supporting Evidence:** The provided \"supporting evidence\" (e.g., about standardized tests, New York Times A/B testing, Oklahoma teacher tests) has extremely low relevance scores (0.08 - 0.11) and bears no relation to the article's content. This indicates a complete absence of actual evidence to back any (non-existent) claims within the article.\n*   **\"Unknown\" Sources and Dates:** Several of the listed supporting evidence items have \"Unknown\" sources and/or dates, further diminishing their potential credibility, although their irrelevance is the primary issue here.\n\n---\n\n### 4. Recommendations for the Reader\n\n*   **Do Not Treat as Factual Information:** This article should not be considered a source of news or factual information. Its explicit nature as a \"test article\" means it contains no substantive content.\n*   **Verify Content and Sources:** Always be skeptical of articles that lack substantive content or verifiable claims. In real-world scenarios, always check the relevance and credibility of any cited sources.\n*   **Recognize Placeholder Content:** Understand that content explicitly labeled as a \"test\" or placeholder should be disregarded for informational purposes.",
   "key_claims": [
     {
-      "claim": "<!doctype html>\n<html data-n-head-ssr lang=\"en\" data-n-head=\"%7B%22lang%22:%7B%22ssr%22:%22en%22%7D%...",
+      "claim": "This is a test article....",
       "keywords": [
-        "<!doctype",
-        "html>",
-        "<html",
-        "data-n-head-ssr",
-        "lang=\"en\""
+        "This",
+        "is",
+        "a",
+        "test",
+        "article."
       ]
     }
   ]
