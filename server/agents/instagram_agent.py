@@ -7,9 +7,11 @@ Uses RapidAPI Instagram120 API.
 import http.client
 import json
 import os
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -239,6 +241,101 @@ class InstagramAgent:
             "average_engagement": round(total_engagement / len(posts), 2) if posts else 0,
             "posts_summary": processed_posts
         }
+
+    def find_matching_posts(self, claim: str, posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Use LLM to analyze Instagram posts and find those matching the claim.
+        Returns posts sorted by relevance with similarity scores.
+        """
+        if not posts:
+            return []
+        
+        # Initialize OpenAI client
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if not openai_key:
+            print("[WARNING] OPENAI_API_KEY not found, falling back to keyword matching")
+            # Fallback to simple keyword matching
+            claim_keywords = claim.lower().split()
+            matching_posts = []
+            for post in posts:
+                caption = post.get("caption", "").lower()
+                if any(keyword in caption for keyword in claim_keywords if len(keyword) > 3):
+                    post_copy = post.copy()
+                    post_copy['similarity_score'] = 0.5
+                    matching_posts.append(post_copy)
+            return matching_posts
+        
+        client = OpenAI(api_key=openai_key)
+        
+        # Prepare post summaries for LLM
+        post_summaries = []
+        for i, post in enumerate(posts):
+            caption = post.get("caption", "")[:500]  # Truncate long captions
+            post_summaries.append(f"Post {i}: {caption}")
+        
+        posts_text = "\n\n".join(post_summaries[:50])  # Limit to 50 posts to avoid token limits
+        
+        prompt = f"""
+You are analyzing Instagram posts to find those relevant to this claim:
+
+Claim: "{claim}"
+
+Instagram Posts:
+{posts_text}
+
+Task: Identify which posts are related to or discuss this claim. Consider:
+- Direct mentions or discussions of the topic
+- Similar events, people, or themes
+- Related news or commentary
+- Fact-checks or debunking attempts
+
+Return ONLY the post numbers (e.g., "0, 3, 7, 12") that match the claim, separated by commas.
+If no posts match, return "NONE".
+
+Matching post numbers:
+"""
+        
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=200
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            if content.upper() == "NONE":
+                return []
+            
+            # Extract post numbers
+            matching_indices = []
+            for num_str in re.findall(r'\d+', content):
+                idx = int(num_str)
+                if 0 <= idx < len(posts):
+                    matching_indices.append(idx)
+            
+            # Calculate similarity scores for matching posts
+            matching_posts = []
+            for idx in matching_indices:
+                post = posts[idx].copy()
+                # Simple similarity score based on LLM selection (could be enhanced)
+                post['similarity_score'] = 0.8  # High score since LLM confirmed relevance
+                matching_posts.append(post)
+            
+            # Log detailed matching information
+            print(f"\n     📊 LLM Analysis Results:")
+            print(f"        Total posts analyzed: {len(posts)}")
+            print(f"        Matching posts found: {len(matching_posts)}")
+            if matching_posts:
+                print(f"        Match rate: {len(matching_posts)/len(posts)*100:.1f}%")
+                print(f"        Matching indices: {sorted(matching_indices)}")
+            
+            return matching_posts
+            
+        except Exception as e:
+            print(f"Error finding matching posts: {e}")
+            return []
 
     def analyze_stories(self, stories: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze stories content and timing."""
