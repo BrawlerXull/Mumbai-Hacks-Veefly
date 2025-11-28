@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import os
 import json
 import time
+import re
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.docstore.document import Document
@@ -26,6 +27,7 @@ class SearchAgent:
             api_key: Optional API key for news services
         """
         self.api_key = api_key or load_api_key("OPENAI_API_KEY")
+        self.serper_api_key = load_api_key("SERPER_API_KEY")
         self.embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         # In a production system, this would be a connection to a database or search API
         self.search_cache = {}
@@ -50,25 +52,19 @@ class SearchAgent:
         search_query = f"{query} news articles"
         
         try:
-            # Use the Google Search MCP Server to search for news articles
-            results = self._google_search_mcp(search_query, date_restrict)
+            # Use the Serper API to search for news articles
+            results = self._search_google(search_query, n=10)
             
             # Process and enrich the results
             enriched_results = []
             for result in results:
-                # Extract source from the URL
-                source = self._extract_source_from_url(result.get("link", ""))
-                
-                # Extract date from the snippet or use current date
-                date = self._extract_date_from_snippet(result.get("snippet", "")) or datetime.now().strftime("%Y-%m-%d")
-                
                 enriched_result = {
                     "title": result.get("title", "Unknown Title"),
-                    "source": source,
-                    "date": date,
-                    "url": result.get("link", ""),
-                    "snippet": result.get("snippet", ""),
-                    "relevance_score": self._calculate_relevance(query, result.get("snippet", ""))
+                    "source": result.get("author", "Unknown Source"),
+                    "date": result.get("timestamp", datetime.now().strftime("%Y-%m-%d")),
+                    "url": result.get("url", ""),
+                    "snippet": result.get("content", ""),
+                    "relevance_score": self._calculate_relevance(query, result.get("content", ""))
                 }
                 enriched_results.append(enriched_result)
             
@@ -78,51 +74,60 @@ class SearchAgent:
             return enriched_results
             
         except Exception as e:
-            print(f"Error searching with Google Search MCP Server: {e}")
-            # Fall back to mock data if the MCP server fails
+            print(f"Error searching with Serper API: {e}")
+            # Fall back to mock data if the API fails
             print("Falling back to mock search data...")
             return self._mock_search_fallback(query, time_range_days)
-    
-    def _google_search_mcp(self, query: str, date_restrict: str = None, num_results: int = 10) -> List[Dict[str, Any]]:
-        """
-        Use Google Search MCP Server to search for news articles.
-        
-        Args:
-            query: Search query
-            date_restrict: Date restriction (e.g., 'm3' for last 3 months)
-            num_results: Number of results to return
             
-        Returns:
-            List of search results
-        """
+    def _search_google(self, query: str, n=10) -> List[Dict[str, Any]]:
+        url = "https://google.serper.dev/search"
+        payload = json.dumps({
+            "q": query,
+            "num": n
+        })
+        headers = {
+            'X-API-KEY': self.serper_api_key,
+            'Content-Type': 'application/json'
+        }
+
         try:
-            # Import MCP client module
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
-            from mcp_client import call_mcp_server
+            res = requests.request("POST", url, headers=headers, data=payload)
+            if res.status_code != 200:
+                print(f"Google search error: {res.status_code}")
+                return []
+
+            data = res.json()
+            organic = data.get("organic", [])
             
-            # Prepare arguments for google_search tool
-            args = {
-                "query": query,
-                "num_results": num_results,
-                "resultType": "news",
-                "sort": "date"
-            }
-            
-            # Add date restriction if specified
-            if date_restrict:
-                args["dateRestrict"] = date_restrict
-            
-            # Call the Google Search MCP Server
-            response = call_mcp_server("google-search", "google_search", args)
-            
-            # Extract search results from the response
-            if response and "results" in response:
-                return response["results"]
-            return []
-            
+            normalized = []
+            for item in organic:
+                # improved timestamp extraction
+                timestamp = item.get("date") or item.get("datePublished")
+                
+                # Try to extract date from snippet if missing (e.g., "Oct 12, 2023 — ...")
+                if not timestamp and item.get("snippet"):
+                    snippet = item.get("snippet")
+                    # Regex for common Google date formats at start of snippet
+                    # Matches: "Oct 12, 2023 — ", "2 days ago — ", "12 Oct 2023 — "
+                    date_match = re.match(r"^([A-Za-z]{3} \d{1,2}, \d{4}|[A-Za-z]{3} \d{1,2}|\d{1,2} [A-Za-z]{3} \d{4}|\d+ (days?|hours?|mins?|weeks?|months?|years?) ago)", snippet)
+                    if date_match:
+                        timestamp = date_match.group(0)
+
+                normalized.append({
+                    "platform": "web",
+                    "content": item.get("snippet", ""),
+                    "url": item.get("link"),
+                    "timestamp": timestamp or "Unknown", 
+                    "author": item.get("source", "Unknown"),
+                    "title": item.get("title", "Unknown Title"),
+                    "id": item.get("link") # Use URL as ID for web
+                })
+            return normalized
         except Exception as e:
-            print(f"Error using Google Search MCP: {e}")
+            print("Google search error:", e)
             return []
+    
+
     
     def _extract_webpage_content(self, url: str) -> str:
         """
@@ -145,12 +150,12 @@ class SearchAgent:
                 "format": "markdown"
             }
             
-            # Call the Google Search MCP Server
-            response = call_mcp_server("google-search", "extract_webpage_content", args)
+            # # Call the Google Search MCP Server
+            # response = call_mcp_server("google-search", "extract_webpage_content", args)
             
-            # Extract content from the response
-            if response and "content" in response:
-                return response["content"]
+            # # Extract content from the response
+            # if response and "content" in response:
+            #     return response["content"]
             return ""
             
         except Exception as e:
