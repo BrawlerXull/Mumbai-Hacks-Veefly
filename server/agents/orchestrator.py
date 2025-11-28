@@ -4,9 +4,6 @@ Responsible for coordinating the overall process and managing communication betw
 """
 from typing import Dict, Any, List, Optional, Tuple
 import json
-import logging
-
-logger = logging.getLogger(__name__)
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -95,7 +92,7 @@ class OrchestratorAgent:
         Returns:
             Dictionary with authenticity assessment and supporting evidence
         """
-        logger.info("Starting fake news detection process...")
+        print("Starting fake news detection process...")
         
         # Initialize metadata if not provided
         if article_metadata is None:
@@ -158,7 +155,7 @@ class OrchestratorAgent:
         Returns:
             List of dictionaries with claims and keywords
         """
-        logger.info("Extracting key claims from article...")
+        print("Extracting key claims from article...")
         
         try:
             # Use the LLM chain to extract claims
@@ -177,7 +174,7 @@ class OrchestratorAgent:
                     "keywords": article_text.split()[:5]
                 }]
         except Exception as e:
-            logger.error(f"Error extracting claims: {e}")
+            print(f"Error extracting claims: {e}")
             # Fallback to a simple approach
             claims = [{
                 "claim": article_text[:100] + "...",
@@ -220,7 +217,7 @@ class OrchestratorAgent:
         Returns:
             Formatted report as a string
         """
-        logger.info("Generating final authenticity report...")
+        print("Generating final authenticity report...")
         
         try:
             # Use the LLM chain to generate the report
@@ -231,7 +228,7 @@ class OrchestratorAgent:
             )
             return report
         except Exception as e:
-            logger.error(f"Error generating report: {e}")
+            print(f"Error generating report: {e}")
             # Fallback to a simple report
             score = score_results.get("final_score", 0)
             category = score_results.get("authenticity_category", "Unknown")

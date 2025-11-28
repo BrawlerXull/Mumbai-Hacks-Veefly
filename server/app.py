@@ -9,24 +9,12 @@ from twilio.twiml.messaging_response import MessagingResponse
 import json
 import os
 
-import logging
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
 app = Flask(__name__)
 CORS(app) # Allow all origins
 load_dotenv()
 
-logger.info(f"OPENAI_API_KEY present: {bool(os.getenv('OPENAI_API_KEY'))}")
-logger.info(f"GOOGLE_API_KEY present: {bool(os.getenv('GOOGLE_API_KEY'))}")
+print(os.getenv("OPENAI_API_KEY"))
+print(os.getenv("GOOGLE_API_KEY"))
 
 def load_article_from_file(file) -> str:
     return file.read().decode("utf-8")

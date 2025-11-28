@@ -4,9 +4,6 @@ Main application for the Fake News Detection Multi-Agent System.
 import os
 import argparse
 import json
-import logging
-
-logger = logging.getLogger(__name__)
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -36,7 +33,7 @@ def save_results_to_file(results: Dict[str, Any], output_file: str) -> None:
     """
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2)
-    logger.info(f"Results saved to {output_file}")
+    print(f"Results saved to {output_file}")
 
 def print_summary(results: Dict[str, Any]) -> None:
     """
@@ -83,15 +80,6 @@ def main() -> None:
     """Main function to run the fake news detection system."""
     # Load environment variables
     load_dotenv()
-
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()
-        ]
-    )
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Fake News Detection Multi-Agent System')
@@ -118,7 +106,7 @@ def main() -> None:
         if content:
             article_text = content
         else:
-            logger.error(f"Error: Could not fetch content from {args.url}")
+            print(f"Error: Could not fetch content from {args.url}")
             return
     
     # Prepare article metadata
@@ -133,7 +121,7 @@ def main() -> None:
     orchestrator = OrchestratorAgent()
     
     # Process the article
-    logger.info("Processing article...")
+    print("Processing article...")
     results = orchestrator.process_article(article_text, article_metadata)
     
     # Save results to file

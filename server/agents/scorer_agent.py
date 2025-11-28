@@ -4,9 +4,6 @@ Responsible for evaluating the authenticity of news articles.
 """
 from typing import List, Dict, Any, Tuple, Optional
 import re
-import logging
-
-logger = logging.getLogger(__name__)
 from datetime import datetime
 import numpy as np
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -73,7 +70,7 @@ class ScorerAgent:
         Returns:
             Dictionary with authenticity score and detailed breakdown
         """
-        logger.info("Scoring article authenticity...")
+        print("Scoring article authenticity...")
         
         # Calculate individual scores
         source_score = self._evaluate_source_credibility(article_metadata.get("source", "Unknown"))
