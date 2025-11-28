@@ -96,28 +96,8 @@ class SearchAgent:
             List of search results
         """
         try:
-            # Import MCP client module
             sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
-            from mcp_client import call_mcp_server
-            
-            # Prepare arguments for google_search tool
-            args = {
-                "query": query,
-                "num_results": num_results,
-                "resultType": "news",
-                "sort": "date"
-            }
-            
-            # Add date restriction if specified
-            if date_restrict:
-                args["dateRestrict"] = date_restrict
-            
-            # Call the Google Search MCP Server
-            response = call_mcp_server("google-search", "google_search", args)
-            
-            # Extract search results from the response
-            if response and "results" in response:
-                return response["results"]
+
             return []
             
         except Exception as e:
@@ -135,22 +115,7 @@ class SearchAgent:
             Extracted content as string
         """
         try:
-            # Import MCP client module
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
-            from mcp_client import call_mcp_server
             
-            # Prepare arguments for extract_webpage_content tool
-            args = {
-                "url": url,
-                "format": "markdown"
-            }
-            
-            # Call the Google Search MCP Server
-            response = call_mcp_server("google-search", "extract_webpage_content", args)
-            
-            # Extract content from the response
-            if response and "content" in response:
-                return response["content"]
             return ""
             
         except Exception as e:
