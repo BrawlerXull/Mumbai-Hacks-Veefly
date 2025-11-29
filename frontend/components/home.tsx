@@ -1,8 +1,9 @@
 "use client"
-import { Search, Menu, User, ArrowRight } from 'lucide-react';
+import { Search, Menu, User, ArrowRight, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FactCarousel from './factCorosol';
+import Orb from './Orb';
 
 interface AnalysisResult {
   authenticity_category?: string;
@@ -68,18 +69,32 @@ export default function VeritasFactCheck() {
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-6">
-        <div className="flex items-center gap-2">
-          <div className="text-3xl font-bold">
-            <span className="text-blue-500">V</span>
-            <span className="text-white">eritas</span>
+      <header className="flex items-center justify-between px-8 py-6 ">
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-red-500/20 rounded-lg blur-xl group-hover:bg-red-500/30 transition-all duration-300"></div>
+            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 transition-all duration-300 group-hover:scale-105">
+              <span className="text-white text-xl font-bold">R</span>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-blue-500/50 animate-pulse"></div>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">
+              RumerLens
+            </h2>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-2.5 h-2.5 text-yellow-500" />
+              <p className="text-[10px] text-gray-500 font-medium tracking-wider uppercase">
+                AI-Powered Analysis
+              </p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button className="p-2.5 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg transition">
+          <button className="p-2.5 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg transition border border-blue-600/30 hover:border-blue-500/50">
             <User className="w-5 h-5 text-blue-400" />
           </button>
-          <button className="p-2.5 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg transition">
+          <button className="p-2.5 bg-blue-600/20 hover:bg-blue-600/30 rounded-lg transition border border-blue-600/30 hover:border-blue-500/50">
             <Menu className="w-6 h-6 text-blue-400" />
           </button>
         </div>
@@ -87,6 +102,7 @@ export default function VeritasFactCheck() {
 
       {/* Hero Section */}
       <main className="max-w-7xl mx-auto px-8 pt-20 pb-16">
+        
         <div className="text-center mb-8">
           <h1 className="text-6xl font-bold mb-6 tracking-tight">
             <span className="text-white">Fact Check</span>
@@ -101,7 +117,7 @@ export default function VeritasFactCheck() {
               onClick={navigateToAnalyze}
               className="group flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all font-semibold shadow-lg hover:shadow-blue-600/50"
             >
-              <span>Start Analysis</span>
+              <span className=' z-50'>Start Analysis</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
@@ -154,6 +170,8 @@ export default function VeritasFactCheck() {
             )}
           </div>
         </div>
+                <FactCarousel />
+
 
         {/* Critical Public Alerts */}
         <section className="mb-20">
@@ -184,7 +202,6 @@ export default function VeritasFactCheck() {
         </section>
 
         {/* Latest Fact Checks */}
-        <FactCarousel />
       </main>
     </div>
   );

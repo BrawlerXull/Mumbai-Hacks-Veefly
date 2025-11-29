@@ -70,7 +70,7 @@ export default function SupplyChainPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">
-                Supply Chain Tracker
+                Info X-ray
               </h1>
               <p className="text-sm text-gray-400">
                 Track how claims propagate across the web

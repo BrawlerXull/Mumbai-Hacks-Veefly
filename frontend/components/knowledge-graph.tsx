@@ -93,7 +93,7 @@ const ENHANCED_CATEGORY_COLORS: Record<NodeCategory, { fill: string; stroke: str
   }
 }
 
-const ENHANCED_RELATIONSHIP_COLORS: Record<RelationshipType, { color: string; label: string; dashPattern: number[] }> = {
+const ENHANCED_RELATIONSHIP_COLORS: Record<string, { color: string; label: string; dashPattern: number[] }> = {
   supports: { color: "#10b981", label: "Supports", dashPattern: [] },
   contradicts: { color: "#ef4444", label: "Contradicts", dashPattern: [8, 4] },
   provides_context: { color: "#f59e0b", label: "Context", dashPattern: [4, 2] },

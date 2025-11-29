@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { Send, Loader2, Shield, CheckCircle, AlertTriangle, FileText, Link as LinkIcon, Upload, Sparkles, Info, TrendingUp } from "lucide-react"
+import { Send, Loader2, Shield, CheckCircle, XCircle, AlertTriangle, Upload, ChevronDown, ExternalLink, BookOpen, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,7 +16,15 @@ interface Message {
   timestamp: Date
 }
 
-export default function TextAnalysisChatPage() {
+interface Source {
+  title: string
+  url?: string
+  snippet?: string
+  domain?: string
+  index: number
+}
+
+export default function ImprovedTextAnalysisChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -28,9 +36,20 @@ export default function TextAnalysisChatPage() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Record<string, { supporting: boolean; contradicting: boolean; sources: boolean }>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const toggleSection = (messageId: string, section: 'supporting' | 'contradicting' | 'sources') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [messageId]: {
+        ...prev[messageId],
+        [section]: !prev[messageId]?.[section]
+      }
+    }))
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -47,6 +66,39 @@ export default function TextAnalysisChatPage() {
     } catch {
       return false
     }
+  }
+
+  const extractSources = (analysis: TextAnalysisResponse): Source[] => {
+    const sources: Source[] = []
+    const seenUrls = new Set<string>()
+    
+    if (analysis.analyzed_claims) {
+      const allClaims = [
+        ...(analysis.analyzed_claims.supporting || []),
+        ...(analysis.analyzed_claims.contradicting || []),
+        ...(analysis.analyzed_claims.neutral || [])
+      ]
+      
+      allClaims.forEach((claim) => {
+        if (claim.url && !seenUrls.has(claim.url)) {
+          seenUrls.add(claim.url)
+          try {
+            const urlObj = new URL(claim.url)
+            sources.push({
+              title: claim.platform || urlObj.hostname.replace('www.', ''),
+              url: claim.url,
+              snippet: claim.content?.substring(0, 150),
+              domain: urlObj.hostname,
+              index: sources.length + 1
+            })
+          } catch (e) {
+            // Skip invalid URLs
+          }
+        }
+      })
+    }
+
+    return sources
   }
 
   const handleAnalyze = async (content: string, isUrl: boolean = false) => {
@@ -172,6 +224,69 @@ export default function TextAnalysisChatPage() {
     }
   }
 
+  const renderSources = (sources: Source[], messageId: string) => {
+    if (sources.length === 0) return null
+
+    return (
+      <div className="mt-4">
+        <button
+          onClick={() => toggleSection(messageId, 'sources')}
+          className="w-full flex items-center gap-2 p-3 rounded-lg bg-[#1a1a1a] hover:bg-[#202020] transition-colors border border-gray-800"
+        >
+          <BookOpen className="h-4 w-4 text-cyan-400 flex-shrink-0" />
+          <span className="font-medium text-gray-200 text-sm">Sources</span>
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            {sources.length}
+          </span>
+          <ChevronDown 
+            className={`h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${
+              expandedSections[messageId]?.sources ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        
+        {expandedSections[messageId]?.sources && (
+          <div className="mt-2 space-y-2">
+            {sources.map((source) => (
+              <a
+                key={source.index}
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-start gap-3 p-3 bg-[#1a1a1a] rounded-lg border border-gray-800 hover:border-blue-500/50 hover:bg-[#202020] transition-all"
+              >
+                <div className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold mt-0.5">
+                  {source.index}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-sm font-medium text-gray-200 line-clamp-1 group-hover:text-blue-400 transition-colors">
+                      {source.title}
+                    </h4>
+                    <ExternalLink className="h-3 w-3 text-gray-500 group-hover:text-blue-400 transition-colors flex-shrink-0 mt-0.5" />
+                  </div>
+                  
+                  {source.domain && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {source.domain}
+                    </p>
+                  )}
+                  
+                  {source.snippet && (
+                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed mt-1">
+                      {source.snippet}
+                    </p>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div
       className="flex flex-col h-screen bg-[#0a0a0a]"
@@ -181,241 +296,344 @@ export default function TextAnalysisChatPage() {
       onDrop={handleDrop}
     >
       {/* Header */}
-      <header className="border-b border-gray-800 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-40">
-        <div className="px-6 py-4">
+      <header className="border-b border-gray-800 bg-[#0a0a0a] sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 shadow-lg shadow-blue-500/20">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-white">FactCheck AI</h1>
-              <p className="text-xs text-gray-400">AI-Powered Credibility Analysis</p>
+              <h1 className="text-base font-semibold text-white">FactCheck AI</h1>
+              <p className="text-xs text-gray-500">AI-Powered Credibility Analysis</p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-4 ${message.type === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {message.type === "assistant" && (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex-shrink-0">
-                  <Shield className="h-4 w-4 text-white" />
-                </div>
-              )}
-
-              <div className={`flex flex-col gap-3 max-w-2xl ${message.type === "user" ? "items-end" : "items-start"}`}>
-                <div
-                  className={`rounded-2xl px-4 py-3 ${
-                    message.type === "user"
-                      ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                      : "bg-[#151515] text-gray-300 border border-gray-800"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                </div>
-
-                {/* Analysis Results */}
-                {message.analysis && (
-                  <div className="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    {/* Authenticity Score Card */}
-                    <Card className="border-gray-800 bg-[#151515] overflow-hidden">
-                      <div
-                        className={`absolute inset-0 pointer-events-none ${
-                          message.analysis.authenticity_score > 0.7
-                            ? "bg-gradient-to-br from-green-500/5 via-transparent to-transparent"
-                            : message.analysis.authenticity_score > 0.4
-                            ? "bg-gradient-to-br from-amber-500/5 via-transparent to-transparent"
-                            : "bg-gradient-to-br from-red-500/5 via-transparent to-transparent"
-                        }`}
-                      />
-                      <CardContent className="p-6 relative">
-                        <div className="flex items-center gap-2 mb-4">
-                          <TrendingUp className="h-5 w-5 text-blue-400" />
-                          <h3 className="font-semibold text-gray-200">Authenticity Score</h3>
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="space-y-6">
+            {messages.map((message) => (
+              <div 
+                key={message.id} 
+                className={`group flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div className={`max-w-[85%] ${message.type === "user" ? "items-end" : "items-start"}`}>
+                  {/* Message Header */}
+                  <div className={`flex items-center gap-3 mb-3 ${message.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                    {message.type === "assistant" ? (
+                      <>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 shrink-0 shadow-lg shadow-blue-500/30">
+                          <Shield className="h-4 w-4 text-white" />
                         </div>
-
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="flex-1">
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-1000 ease-out ${
-                                  message.analysis.authenticity_score > 0.7
-                                    ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                                    : message.analysis.authenticity_score > 0.4
-                                    ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                                    : "bg-gradient-to-r from-red-500 to-rose-500"
-                                }`}
-                                style={{ width: `${message.analysis.authenticity_score * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                          <span
-                            className={`text-2xl font-bold ${
-                              message.analysis.authenticity_score > 0.7
-                                ? "text-green-400"
-                                : message.analysis.authenticity_score > 0.4
-                                ? "text-amber-400"
-                                : "text-red-400"
-                            }`}
-                          >
-                            {(message.analysis.authenticity_score * 100).toFixed(1)}%
-                          </span>
+                        <span className="text-sm font-semibold text-gray-200">FactCheck AI</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-gray-700 to-gray-800 shrink-0 shadow-lg">
+                          <span className="text-xs font-medium text-white">You</span>
                         </div>
+                        <span className="text-sm font-semibold text-gray-200">You</span>
+                      </>
+                    )}
+                  </div>
 
-                        <div className="flex items-center gap-2 p-3 bg-[#0a0a0a] rounded-lg border border-gray-800">
-                          <Shield
-                            className={`h-4 w-4 ${
-                              message.analysis.authenticity_score > 0.7
-                                ? "text-green-400"
-                                : message.analysis.authenticity_score > 0.4
-                                ? "text-amber-400"
-                                : "text-red-400"
+                  {/* Message Content */}
+                  <div className={message.type === "user" ? "mr-11" : "ml-11"}>
+                    <div 
+                      className={`rounded-2xl px-4 py-3 ${
+                        message.type === "user" 
+                          ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white" 
+                          : "bg-[#151515] border border-gray-800"
+                      }`}
+                    >
+                      <p className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                        message.type === "user" ? "text-white" : "text-gray-300"
+                      }`}>
+                        {message.content}
+                      </p>
+                    </div>
+
+                    {/* Analysis Results */}
+                    {message.analysis && (
+                      <div className="mt-4 space-y-3">{/* Verdict Card */}
+                      {message.analysis.verdict && (
+                        <div className="rounded-lg border border-gray-800 bg-[#151515] p-4 overflow-hidden relative">
+                          <div
+                            className={`absolute inset-0 pointer-events-none opacity-5 ${
+                              message.analysis.verdict.verdict === "LIKELY TRUE"
+                                ? "bg-gradient-to-br from-green-500"
+                                : message.analysis.verdict.verdict === "LIKELY FALSE"
+                                ? "bg-gradient-to-br from-red-500"
+                                : "bg-gradient-to-br from-amber-500"
                             }`}
                           />
-                          <div>
-                            <p className="text-xs text-gray-500">Category</p>
-                            <p className="text-sm font-semibold text-gray-200">{message.analysis.category}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                          
+                          <div className="relative">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Shield className="h-4 w-4 text-blue-400" />
+                              <h3 className="font-semibold text-sm text-gray-200">Verdict</h3>
+                            </div>
 
-                    {/* Analysis Report */}
-                    <Card className="border-gray-800 bg-[#151515]">
-                      <CardContent className="p-6">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Info className="h-5 w-5 text-blue-400" />
-                          <h3 className="font-semibold text-gray-200">Detailed Analysis</h3>
-                        </div>
-                        <div className="prose prose-invert prose-sm max-w-none space-y-3">
-                          {message.analysis.report.split('\n').map((line, idx) => {
-                            const trimmedLine = line.trim()
-                            
-                            // Skip bullet point markers that are standalone
-                            if (trimmedLine === '•' || trimmedLine === '*' || trimmedLine === '-') {
-                              return null
-                            }
-                            
-                            // Handle headers (##, ###, etc)
-                            if (trimmedLine.startsWith('###')) {
-                              return (
-                                <h4 key={idx} className="text-base font-semibold text-gray-200 mt-6 mb-3 flex items-center gap-2">
-                                  <span className="w-1 h-4 bg-blue-500 rounded"></span>
-                                  {trimmedLine.replace(/^###\s*/, '').replace(/^\d+\.\s*/, '')}
-                                </h4>
-                              )
-                            }
-                            if (trimmedLine.startsWith('##')) {
-                              return (
-                                <h3 key={idx} className="text-lg font-bold text-gray-100 mt-6 mb-3 flex items-center gap-2">
-                                  <span className="w-1.5 h-5 bg-cyan-500 rounded"></span>
-                                  {trimmedLine.replace(/^##\s*/, '')}
-                                </h3>
-                              )
-                            }
-                            
-                            // Handle numbered sections (1., 2., etc.) at start of line
-                            if (/^\d+\.\s+[A-Z]/.test(trimmedLine)) {
-                              return (
-                                <h4 key={idx} className="text-base font-semibold text-gray-200 mt-5 mb-2 flex items-center gap-2">
-                                  <span className="w-1 h-4 bg-blue-500 rounded"></span>
-                                  {trimmedLine}
-                                </h4>
-                              )
-                            }
-                            
-                            // Handle list items with * or - (including those with bold text)
-                            if (/^[\*\-]\s+/.test(trimmedLine)) {
-                              const content = trimmedLine.replace(/^[\*\-]\s+/, '')
-                              
-                              // Parse bold text within list items
-                              const renderContent = () => {
-                                if (content.includes('**')) {
-                                  const parts = content.split(/(\*\*.*?\*\*)/)
-                                  return parts.map((part, i) => {
-                                    if (part.startsWith('**') && part.endsWith('**')) {
-                                      return <strong key={i} className="text-gray-200 font-semibold">{part.slice(2, -2)}</strong>
-                                    }
-                                    // Replace backticks for inline code
-                                    if (part.includes('`')) {
-                                      return part.split(/(`.*?`)/).map((subpart, j) => {
-                                        if (subpart.startsWith('`') && subpart.endsWith('`')) {
-                                          return <code key={j} className="text-cyan-400 bg-gray-900 px-1 rounded text-xs">{subpart.slice(1, -1)}</code>
-                                        }
-                                        return subpart
-                                      })
-                                    }
-                                    return part
-                                  })
-                                }
-                                return content
-                              }
-                              
-                              return (
-                                <div key={idx} className="flex items-start gap-2.5 ml-4 my-2">
-                                  <span className="text-blue-400 mt-1 text-lg leading-none">•</span>
-                                  <div className="text-sm text-gray-400 leading-relaxed flex-1">
-                                    {renderContent()}
-                                  </div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                {message.analysis.verdict.verdict === "LIKELY TRUE" && (
+                                  <CheckCircle className="h-5 w-5 text-green-400" />
+                                )}
+                                {message.analysis.verdict.verdict === "LIKELY FALSE" && (
+                                  <XCircle className="h-5 w-5 text-red-400" />
+                                )}
+                                {(message.analysis.verdict.verdict === "UNCERTAIN" || message.analysis.verdict.verdict === "MIXED EVIDENCE") && (
+                                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                                )}
+                                <div>
+                                  <p className={`text-base font-bold ${
+                                    message.analysis.verdict.verdict === "LIKELY TRUE"
+                                      ? "text-green-400"
+                                      : message.analysis.verdict.verdict === "LIKELY FALSE"
+                                      ? "text-red-400"
+                                      : "text-amber-400"
+                                  }`}>
+                                    {message.analysis.verdict.verdict}
+                                  </p>
                                 </div>
-                              )
-                            }
-                            
-                            // Handle horizontal rules
-                            if (trimmedLine === '---' || trimmedLine === '•') {
-                              return <hr key={idx} className="border-gray-800 my-4" />
-                            }
-                            
-                            // Handle empty lines
-                            if (trimmedLine === '') {
-                              return <div key={idx} className="h-1"></div>
-                            }
-                            
-                            // Handle lines with bold text (**text**)
-                            if (line.includes('**')) {
-                              const parts = line.split(/(\*\*.*?\*\*)/)
-                              return (
-                                <p key={idx} className="text-sm text-gray-400 leading-relaxed">
-                                  {parts.map((part, i) => {
-                                    if (part.startsWith('**') && part.endsWith('**')) {
-                                      return <strong key={i} className="text-gray-200 font-semibold">{part.slice(2, -2)}</strong>
-                                    }
-                                    return part
-                                  })}
-                                </p>
-                              )
-                            }
-                            
-                            // Regular paragraphs
-                            return (
-                              <p key={idx} className="text-sm text-gray-400 leading-relaxed">
-                                {line}
-                              </p>
-                            )
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
+                              </div>
 
-                    {/* Key Claims */}
-                    {message.analysis.key_claims && message.analysis.key_claims.length > 0 && (
-                      <Card className="border-gray-800 bg-[#151515]">
-                        <CardContent className="p-6">
-                          <div className="flex items-center gap-2 mb-4">
-                            <CheckCircle className="h-5 w-5 text-green-400" />
-                            <h3 className="font-semibold text-gray-200">Key Claims</h3>
+                              <div className="text-right">
+                                <p className={`text-xl font-bold ${
+                                  message.analysis.verdict.confidence > 0.7
+                                    ? "text-green-400"
+                                    : message.analysis.verdict.confidence > 0.4
+                                    ? "text-amber-400"
+                                    : "text-red-400"
+                                }`}>
+                                  {(message.analysis.verdict.confidence * 100).toFixed(0)}%
+                                </p>
+                                <p className="text-xs text-gray-500">Confidence</p>
+                              </div>
+                            </div>
+
+                            <div className="mb-3">
+                              <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-1000 ease-out ${
+                                    message.analysis.verdict.confidence > 0.7
+                                      ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                                      : message.analysis.verdict.confidence > 0.4
+                                      ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                                      : "bg-gradient-to-r from-red-500 to-rose-500"
+                                  }`}
+                                  style={{ width: `${message.analysis.verdict.confidence * 100}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {message.analysis.verdict.explanation && (
+                              <div className="p-3 bg-[#0a0a0a] rounded-lg border border-gray-800">
+                                <p className="text-sm text-gray-300 leading-relaxed">
+                                  {message.analysis.verdict.explanation}
+                                </p>
+                              </div>
+                            )}
+
+                            {message.analysis.verdict.evidence_summary && (
+                              <div className="mt-3 space-y-2">
+                                {message.analysis.verdict.evidence_summary.general && (
+                                  <div className="p-3 bg-[#0a0a0a] rounded-lg border border-gray-800">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-xs font-semibold text-gray-400">General Sources</p>
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        message.analysis.verdict.evidence_summary.general.stance === "SUPPORTS_CLAIM"
+                                          ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                                          : message.analysis.verdict.evidence_summary.general.stance === "CONTRADICTS_CLAIM"
+                                          ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                          : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                                      }`}>
+                                        {message.analysis.verdict.evidence_summary.general.stance.replace(/_/g, ' ')}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-4 text-xs">
+                                      <div className="flex items-center gap-1.5">
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-400" />
+                                        <span className="text-gray-300">
+                                          {message.analysis.verdict.evidence_summary.general.support} Supporting
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                        <span className="text-gray-300">
+                                          {message.analysis.verdict.evidence_summary.general.contradict} Contradicting
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {message.analysis.verdict.evidence_summary.instagram && (
+                                  <div className="p-3 bg-[#0a0a0a] rounded-lg border border-gray-800">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-xs font-semibold text-gray-400">Instagram Sources</p>
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        message.analysis.verdict.evidence_summary.instagram.stance === "SUPPORTS_CLAIM"
+                                          ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                                          : message.analysis.verdict.evidence_summary.instagram.stance === "CONTRADICTS_CLAIM"
+                                          ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                          : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                                      }`}>
+                                        {message.analysis.verdict.evidence_summary.instagram.stance.replace(/_/g, ' ')}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-4 text-xs">
+                                      <div className="flex items-center gap-1.5">
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-400" />
+                                        <span className="text-gray-300">
+                                          {message.analysis.verdict.evidence_summary.instagram.support} Supporting
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <XCircle className="h-3.5 w-3.5 text-red-400" />
+                                        <span className="text-gray-300">
+                                          {message.analysis.verdict.evidence_summary.instagram.contradict} Contradicting
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <ul className="space-y-3">
+                        </div>
+                      )}
+
+                      {/* Statistics */}
+                      {message.analysis.statistics && (
+                        <div className="rounded-lg border border-gray-800 bg-[#151515] p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp className="h-4 w-4 text-blue-400" />
+                            <h3 className="font-semibold text-sm text-gray-200">Evidence Statistics</h3>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="p-2.5 bg-[#0a0a0a] rounded-lg border border-green-800/30">
+                              <p className="text-xs text-gray-500 mb-0.5">Supporting</p>
+                              <p className="text-lg font-bold text-green-400">{message.analysis.statistics.supporting_count}</p>
+                            </div>
+                            <div className="p-2.5 bg-[#0a0a0a] rounded-lg border border-red-800/30">
+                              <p className="text-xs text-gray-500 mb-0.5">Contradicting</p>
+                              <p className="text-lg font-bold text-red-400">{message.analysis.statistics.contradicting_count}</p>
+                            </div>
+                            <div className="p-2.5 bg-[#0a0a0a] rounded-lg border border-amber-800/30">
+                              <p className="text-xs text-gray-500 mb-0.5">Neutral</p>
+                              <p className="text-lg font-bold text-amber-400">{message.analysis.statistics.neutral_count}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sources */}
+                      {renderSources(extractSources(message.analysis), message.id)}
+
+                      {/* Supporting Claims */}
+                      {message.analysis.analyzed_claims?.supporting && message.analysis.analyzed_claims.supporting.length > 0 && (
+                        <div>
+                          <button
+                            onClick={() => toggleSection(message.id, 'supporting')}
+                            className="w-full flex items-center gap-2 p-3 rounded-lg bg-[#1a1a1a] hover:bg-[#202020] transition-colors border border-green-800/30"
+                          >
+                            <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
+                            <span className="font-medium text-gray-200 text-sm">Supporting Evidence</span>
+                            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                              {message.analysis.analyzed_claims.supporting.length}
+                            </span>
+                            <ChevronDown 
+                              className={`h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${
+                                expandedSections[message.id]?.supporting ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+                          {expandedSections[message.id]?.supporting && (
+                            <div className="mt-2 space-y-2">
+                              {message.analysis.analyzed_claims.supporting.map((claim, idx) => (
+                                <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg border border-green-800/30">
+                                  <div className="flex items-start justify-between gap-3 mb-1">
+                                    <p className="text-sm text-gray-300 leading-relaxed flex-1">{claim.claim}</p>
+                                    {claim.platform && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                                        {claim.platform}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {claim.author && (
+                                    <p className="text-xs text-gray-500 mb-1">By: {claim.author}</p>
+                                  )}
+                                  {claim.reasoning && (
+                                    <p className="text-xs text-gray-400 italic mt-2 pt-2 border-t border-gray-800">
+                                      {claim.reasoning}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Contradicting Claims */}
+                      {message.analysis.analyzed_claims?.contradicting && message.analysis.analyzed_claims.contradicting.length > 0 && (
+                        <div>
+                          <button
+                            onClick={() => toggleSection(message.id, 'contradicting')}
+                            className="w-full flex items-center gap-2 p-3 rounded-lg bg-[#1a1a1a] hover:bg-[#202020] transition-colors border border-red-800/30"
+                          >
+                            <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                            <span className="font-medium text-gray-200 text-sm">Contradicting Evidence</span>
+                            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                              {message.analysis.analyzed_claims.contradicting.length}
+                            </span>
+                            <ChevronDown 
+                              className={`h-4 w-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ${
+                                expandedSections[message.id]?.contradicting ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+                          {expandedSections[message.id]?.contradicting && (
+                            <div className="mt-2 space-y-2">
+                              {message.analysis.analyzed_claims.contradicting.map((claim, idx) => (
+                                <div key={idx} className="p-3 bg-[#1a1a1a] rounded-lg border border-red-800/30">
+                                  <div className="flex items-start justify-between gap-3 mb-1">
+                                    <p className="text-sm text-gray-300 leading-relaxed flex-1">{claim.claim}</p>
+                                    {claim.platform && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                                        {claim.platform}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {claim.author && (
+                                    <p className="text-xs text-gray-500 mb-1">By: {claim.author}</p>
+                                  )}
+                                  {claim.reasoning && (
+                                    <p className="text-xs text-gray-400 italic mt-2 pt-2 border-t border-gray-800">
+                                      {claim.reasoning}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Key Claims */}
+                      {message.analysis.key_claims && message.analysis.key_claims.length > 0 && (
+                        <div className="rounded-lg border border-gray-800 bg-[#151515] p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <h3 className="font-semibold text-sm text-gray-200">Key Claims</h3>
+                          </div>
+                          <ul className="space-y-2">
                             {message.analysis.key_claims
                               .filter((claim) => {
                                 const claimText = typeof claim === "string" ? claim : claim.claim
-                                // Filter out HTML, DOCTYPE declarations, and very short/technical content
                                 return (
                                   claimText &&
                                   !claimText.includes('<!doctype') &&
@@ -431,69 +649,45 @@ export default function TextAnalysisChatPage() {
                                 return (
                                   <li 
                                     key={idx} 
-                                    className="flex items-start gap-3 p-3 bg-[#0a0a0a] rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
+                                    className="flex items-start gap-2 p-2.5 bg-[#0a0a0a] rounded-lg border border-gray-800"
                                   >
-                                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-400 mt-0.5 flex-shrink-0" />
                                     <span className="text-sm text-gray-300 leading-relaxed">
                                       {claimText}
                                     </span>
                                   </li>
                                 )
                               })}
-                            {message.analysis.key_claims.filter((claim) => {
-                              const claimText = typeof claim === "string" ? claim : claim.claim
-                              return (
-                                claimText &&
-                                !claimText.includes('<!doctype') &&
-                                !claimText.includes('<html') &&
-                                !claimText.includes('</html>') &&
-                                !claimText.startsWith('<') &&
-                                claimText.length > 10
-                              )
-                            }).length === 0 && (
-                              <div className="text-center py-4">
-                                <p className="text-sm text-gray-500">No specific claims could be extracted from this content.</p>
-                                <p className="text-xs text-gray-600 mt-1">This may be due to the nature of the input or incomplete article content.</p>
-                              </div>
-                            )}
                           </ul>
-                        </CardContent>
-                      </Card>
-                    )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   </div>
-                )}
-
-                <span className="text-xs text-gray-600">
-                  {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </div>
-
-              {message.type === "user" && (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-800 flex-shrink-0">
-                  <span className="text-sm font-medium text-white">You</span>
                 </div>
-              )}
-            </div>
-          ))}
-
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex gap-4 justify-start">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex-shrink-0">
-                <Shield className="h-4 w-4 text-white" />
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="rounded-2xl px-4 py-3 bg-[#151515] border border-gray-800">
+            ))}
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="group">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex-shrink-0">
+                    <Shield className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-200">FactCheck AI</span>
+                </div>
+                <div className="ml-10">
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
                     <span className="text-sm text-gray-400">Analyzing content...</span>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
 
@@ -509,39 +703,40 @@ export default function TextAnalysisChatPage() {
       )}
 
       {/* Input Area */}
-      <div className="border-t border-gray-800 bg-[#0a0a0a]/80 backdrop-blur-xl">
-        <div className="max-w-3xl mx-auto p-4">
+      <div className="border-t border-gray-800 bg-[#0a0a0a] sticky bottom-0">
+        <div className="max-w-4xl mx-auto px-4 py-4">
           <form onSubmit={handleSubmit} className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Paste text, enter a URL, or drag & drop a file..."
-              disabled={isLoading}
-              rows={1}
-              className="min-h-[52px] max-h-[200px] resize-none bg-[#151515] border-gray-800 text-gray-300 placeholder-gray-600 pr-24 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 rounded-xl"
-            />
-
-            <div className="absolute right-2 bottom-2 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-                className="h-8 w-8 p-0 hover:bg-gray-800"
-              >
-                <Upload className="h-4 w-4 text-gray-400" />
-              </Button>
+            <div className="relative flex items-end gap-2">
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Paste text, enter a URL, or drag & drop a file..."
+                  disabled={isLoading}
+                  rows={1}
+                  className="min-h-[52px] max-h-[200px] resize-none bg-[#1a1a1a] border-gray-700 text-gray-300 placeholder-gray-500 pr-12 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 rounded-xl text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  className="absolute right-2 bottom-2 h-8 w-8 p-0 hover:bg-gray-700/50"
+                >
+                  <Upload className="h-4 w-4 text-gray-400" />
+                </Button>
+              </div>
 
               <Button
                 type="submit"
                 size="sm"
                 disabled={isLoading || !input.trim()}
-                className="h-8 w-8 p-0 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-[52px] w-[52px] p-0 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl flex-shrink-0"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </Button>
             </div>
 
@@ -558,7 +753,7 @@ export default function TextAnalysisChatPage() {
           </form>
 
           <p className="text-xs text-gray-600 text-center mt-2">
-            Press Enter to send • Shift + Enter for new line • Supports text, URLs, and .txt files
+            Press Enter to send • Shift + Enter for new line
           </p>
         </div>
       </div>

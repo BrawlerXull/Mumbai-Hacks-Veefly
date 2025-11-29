@@ -240,7 +240,7 @@ export default function MediaForensicsPage() {
             <TabsList className="grid w-full grid-cols-2 bg-[#151515] border border-gray-800 p-1 rounded-xl shadow-lg">
               <TabsTrigger 
                 value="image" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-violet-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 text-gray-400 transition-all duration-300 rounded-lg"
+                className="  data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-violet-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 text-gray-400 transition-all duration-300 rounded-lg"
               >
                 <ImageIcon className="h-4 w-4 mr-2" />
                 Images
