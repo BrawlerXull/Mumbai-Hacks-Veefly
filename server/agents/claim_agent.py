@@ -22,7 +22,7 @@ class ClaimAnalysisAgent:
         Args:
             api_key: Optional API key for LLM services
         """
-        self.api_key = "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"
+        self.api_key = "API KEY HERE"
         self.llm = ChatOpenAI(temperature=0, model="gpt-4o", api_key=self.api_key)
         
         # Prompt for classifying claims
