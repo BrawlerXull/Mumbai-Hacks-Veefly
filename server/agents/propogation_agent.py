@@ -98,7 +98,8 @@ class HarvestAgent:
                         "url": f"https://twitter.com/{author}/status/{legacy.get('id_str')}" if author != "Unknown_User" else "",
                         "timestamp": created_at,
                         "author": f"@{author}",
-                        "id": legacy.get("id_str") or str(hash(text))
+                        "id": legacy.get("id_str") or str(hash(text)),
+                        "source_type": "general"
                     })
             except Exception as e:
                 print(f"Twitter search error: {e}")
@@ -147,7 +148,8 @@ class HarvestAgent:
                     "url": f"https://reddit.com{p_data.get('permalink')}" if p_data.get('permalink') else "",
                     "timestamp": timestamp,
                     "author": f"u/{p_data.get('author', 'unknown')}",
-                    "id": p_data.get("id") or str(hash(content))
+                    "id": p_data.get("id") or str(hash(content)),
+                    "source_type": "general"
                 })
         except Exception as e:
             print(f"Reddit search error: {e}")
@@ -208,7 +210,8 @@ class HarvestAgent:
                             "comments": post.get("comments", 0),
                             "is_video": post.get("is_video", False),
                             "similarity_score": post.get("similarity_score", 0),
-                            "media_url": post.get("media_url", "")
+                            "media_url": post.get("media_url", ""),
+                            "source_type": "related" if self.account_finder else "general"
                         })
                         
             except Exception as e:
@@ -280,7 +283,8 @@ class HarvestAgent:
                     "url": item.get("link"),
                     "timestamp": timestamp or "Unknown", 
                     "author": item.get("source", "Unknown"),
-                    "id": item.get("link") # Use URL as ID for web
+                    "id": item.get("link"), # Use URL as ID for web
+                    "source_type": "general"
                 })
             return normalized
         except Exception as e:

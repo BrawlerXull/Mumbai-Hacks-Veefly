@@ -76,6 +76,103 @@ def track_propagation():
         print(f"Error tracking propagation: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/verify-claim', methods=['POST'])
+def verify_claim():
+    """
+    Endpoint to verify a claim using the full verdict pipeline.
+    
+    Request body:
+    {
+        "query": "the claim to verify"
+    }
+    
+    Response:
+    {
+        "query": "...",
+        "verdict": {
+            "verdict": "TRUE/FALSE/LIKELY TRUE/LIKELY FALSE/UNVERIFIED",
+            "confidence": 0.95,
+            "explanation": "...",
+            "evidence_summary": {...}
+        },
+        "harvested_items": [...],
+        "analyzed_claims": {
+            "supporting": [...],
+            "contradicting": [...],
+            "neutral": [...]
+        },
+        "statistics": {
+            "total_items": 41,
+            "supporting_count": 10,
+            "contradicting_count": 5,
+            "neutral_count": 26
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Missing 'query' in request body"}), 400
+        
+        query = data['query']
+        
+        # Import the agents
+        from agents.propogation_agent import HarvestAgent
+        from agents.claim_agent import ClaimAnalysisAgent
+        from agents.verdict_agent import VerdictAgent
+        
+        # 1. Harvest Data
+        harvester = HarvestAgent(use_smart_accounts=True)
+        items = harvester.harvest(query)
+        
+        # 2. Analyze Claims
+        analyzer = ClaimAnalysisAgent()
+        analyzed_items = analyzer.analyze_claims(query, items)
+        
+        # 3. Flatten analysis data for easier access
+        for item in analyzed_items:
+            analysis = item.get('analysis', {})
+            item['classification'] = analysis.get('classification', 'NEUTRAL')
+            item['claim'] = analysis.get('claim', 'No claim extracted')
+            item['reasoning'] = analysis.get('reasoning', 'No reasoning provided')
+        
+        # 4. Determine Verdict
+        verdict_agent = VerdictAgent()
+        final_verdict = verdict_agent.determine_verdict(query, analyzed_items)
+        
+        # 5. Categorize claims
+        supporting = [item for item in analyzed_items if item.get('classification') == 'SUPPORT']
+        contradicting = [item for item in analyzed_items if item.get('classification') == 'CONTRADICT']
+        neutral = [item for item in analyzed_items if item.get('classification') == 'NEUTRAL']
+        
+        # 6. Build response
+        response = {
+            "query": query,
+            "verdict": final_verdict,
+            "harvested_items": items,
+            "analyzed_claims": {
+                "supporting": supporting,
+                "contradicting": contradicting,
+                "neutral": neutral
+            },
+            "statistics": {
+                "total_items": len(analyzed_items),
+                "supporting_count": len(supporting),
+                "contradicting_count": len(contradicting),
+                "neutral_count": len(neutral),
+                "instagram_items": len([i for i in analyzed_items if i.get('source_type') == 'related']),
+                "general_items": len([i for i in analyzed_items if i.get('source_type') == 'general'])
+            }
+        }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        print(f"Error verifying claim: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/analyze-video", methods=["POST"])
 def analyze_video():
     """
